@@ -1,7 +1,8 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
 from fpdf import FPDF
 import requests
 import json
@@ -134,25 +135,47 @@ def generate_recommendations(user_data, net_worth, dti, savings_rate):
     return "\n\n".join(recs)
 
 def plot_goals(goals):
-    """Buat visualisasi tujuan keuangan"""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    """Buat visualisasi tujuan keuangan menggunakan Plotly"""
     goal_names = [g['nama'] for g in goals]
     current_targets = [g['target_sekarang'] / 1e6 for g in goals]
     future_targets = [g['target_masa_depan'] / 1e6 for g in goals]
     
-    x = np.arange(len(goal_names))
-    width = 0.35
+    # Buat figure dengan Plotly
+    fig = go.Figure()
     
-    ax.bar(x - width/2, current_targets, width, label='Target Sekarang')
-    ax.bar(x + width/2, future_targets, width, label='Target Masa Depan')
+    # Tambahkan bar untuk target sekarang
+    fig.add_trace(go.Bar(
+        name='Target Sekarang',
+        x=goal_names,
+        y=current_targets,
+        marker_color='#6a11cb'
+    ))
     
-    ax.set_ylabel('Juta IDR')
-    ax.set_title('Perbandingan Target Keuangan')
-    ax.set_xticks(x)
-    ax.set_xticklabels(goal_names)
-    ax.legend()
+    # Tambahkan bar untuk target masa depan
+    fig.add_trace(go.Bar(
+        name='Target Masa Depan',
+        x=goal_names,
+        y=future_targets,
+        marker_color='#2575fc'
+    ))
     
-    st.pyplot(fig)
+    # Update layout
+    fig.update_layout(
+        title='Perbandingan Target Keuangan',
+        xaxis_title='Tujuan Keuangan',
+        yaxis_title='Juta IDR',
+        barmode='group',
+        height=500,
+        showlegend=True,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    
+    # Update axes
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 # ====================== FUNGSI AI CHAT ======================
 def get_ai_response(prompt, model="deepseek/deepseek-r1-0528-qwen3-8b:free", api_key=None):
@@ -475,6 +498,15 @@ def client_info_form():
 
 def show_financial_analysis(api_key):
     """Tampilkan hasil analisis dan fitur chat"""
+    # Tombol kembali ke input
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        if st.button("⬅️ Kembali ke Input Data", use_container_width=True):
+            st.session_state.step = 1
+            st.rerun()
+    
+    st.divider()
+    
     # Lakukan perhitungan
     analysis = calculate_financials(st.session_state.user_data)
     st.session_state.user_data['analysis'] = analysis
